@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hexio-sdk"
+version = "1.0.0"
+description = "Hexio External Agent SDK - Python client for the Hexio C2 External Agent REST API"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "Proprietary"}
+
+[project.urls]
+Documentation = "https://docs.hexio.io/external-agents"
+
+[tool.setuptools.packages.find]
+include = ["hexio_sdk*"]

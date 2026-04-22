@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4f46e5"/></linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#0284c7"/></linearGradient>
+    <linearGradient id="g3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#059669"/></linearGradient>
+    <linearGradient id="g4" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#d97706"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/></filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="340" rx="12" fill="#0f172a"/>
+
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="600">External Agent Architecture</text>
+
+  <!-- Custom Agent -->
+  <rect x="30" y="70" width="170" height="80" rx="10" fill="url(#g1)" filter="url(#shadow)"/>
+  <text x="115" y="105" text-anchor="middle" fill="white" font-size="13" font-weight="600">Custom Agent</text>
+  <text x="115" y="125" text-anchor="middle" fill="#c7d2fe" font-size="10">Your implant / tool</text>
+
+  <!-- Arrow 1 -->
+  <line x1="200" y1="110" x2="270" y2="110" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="235" y="100" text-anchor="middle" fill="#94a3b8" font-size="9">Your Transport</text>
+
+  <!-- Connector -->
+  <rect x="270" y="70" width="170" height="80" rx="10" fill="url(#g2)" filter="url(#shadow)"/>
+  <text x="355" y="100" text-anchor="middle" fill="white" font-size="13" font-weight="600">Connector</text>
+  <text x="355" y="118" text-anchor="middle" fill="#bae6fd" font-size="10">WebSocket / TCP / Custom</text>
+  <text x="355" y="133" text-anchor="middle" fill="#bae6fd" font-size="9">(optional forwarder)</text>
+
+  <!-- Arrow 2 -->
+  <line x1="440" y1="110" x2="510" y2="110" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="475" y="100" text-anchor="middle" fill="#94a3b8" font-size="9">HTTP / JSON</text>
+
+  <!-- External Agent Listener -->
+  <rect x="510" y="55" width="170" height="110" rx="10" fill="url(#g3)" filter="url(#shadow)"/>
+  <text x="595" y="85" text-anchor="middle" fill="white" font-size="13" font-weight="600">ExternalAgent</text>
+  <text x="595" y="103" text-anchor="middle" fill="white" font-size="13" font-weight="600">Listener</text>
+  <text x="595" y="123" text-anchor="middle" fill="#a7f3d0" font-size="10">REST API</text>
+  <text x="595" y="140" text-anchor="middle" fill="#a7f3d0" font-size="10">Passphrase Auth</text>
+  <text x="595" y="155" text-anchor="middle" fill="#a7f3d0" font-size="9">Token Auth</text>
+
+  <!-- Arrow 3 -->
+  <line x1="680" y1="110" x2="720" y2="110" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Hexio Teamserver -->
+  <rect x="720" y="55" width="155" height="110" rx="10" fill="url(#g4)" filter="url(#shadow)"/>
+  <text x="797" y="85" text-anchor="middle" fill="white" font-size="13" font-weight="600">Hexio</text>
+  <text x="797" y="103" text-anchor="middle" fill="white" font-size="13" font-weight="600">Teamserver</text>
+  <text x="797" y="125" text-anchor="middle" fill="#fef3c7" font-size="10">DB / Commands</text>
+  <text x="797" y="140" text-anchor="middle" fill="#fef3c7" font-size="10">File Manager</text>
+  <text x="797" y="155" text-anchor="middle" fill="#fef3c7" font-size="10">Socket.IO</text>
+
+  <!-- Direct path -->
+  <rect x="30" y="210" width="170" height="80" rx="10" fill="url(#g1)" filter="url(#shadow)" opacity="0.8"/>
+  <text x="115" y="245" text-anchor="middle" fill="white" font-size="13" font-weight="600">Custom Agent</text>
+  <text x="115" y="263" text-anchor="middle" fill="#c7d2fe" font-size="10">(direct mode)</text>
+
+  <!-- Long arrow -->
+  <line x1="200" y1="250" x2="510" y2="250" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowhead)"/>
+  <text x="355" y="240" text-anchor="middle" fill="#94a3b8" font-size="9">Direct HTTP / JSON (no connector)</text>
+
+  <!-- Listener box for direct -->
+  <rect x="510" y="220" width="170" height="60" rx="10" fill="url(#g3)" filter="url(#shadow)" opacity="0.8"/>
+  <text x="595" y="248" text-anchor="middle" fill="white" font-size="12" font-weight="600">ExternalAgent Listener</text>
+  <text x="595" y="266" text-anchor="middle" fill="#a7f3d0" font-size="10">Same API</text>
+
+  <!-- Arrow -->
+  <line x1="680" y1="250" x2="720" y2="250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- TS box for direct -->
+  <rect x="720" y="220" width="155" height="60" rx="10" fill="url(#g4)" filter="url(#shadow)" opacity="0.8"/>
+  <text x="797" y="253" text-anchor="middle" fill="white" font-size="13" font-weight="600">Teamserver</text>
+
+  <!-- Labels -->
+  <text x="30" y="315" fill="#64748b" font-size="11" font-style="italic">Option A: With custom transport connector</text>
+  <text x="30" y="333" fill="#64748b" font-size="11" font-style="italic">Option B: Direct HTTP from agent to listener</text>
+
+  <!-- Arrowhead marker -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+  </defs>
+</svg>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net6.0;net8.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>Hexio.ExternalAgentSdk</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Hexio</Authors>
+    <Description>Hexio External Agent SDK - .NET client for the Hexio C2 External Agent REST API</Description>
+    <RootNamespace>Hexio</RootNamespace>
+    <AssemblyName>Hexio.ExternalAgentSdk</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
+  </ItemGroup>
+
+</Project>

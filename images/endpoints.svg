@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 570" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <filter id="es"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.1"/></filter>
+  </defs>
+
+  <rect width="800" height="570" rx="12" fill="#0f172a"/>
+  <text x="400" y="32" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="600">API Endpoint Map</text>
+
+  <!-- Registration section -->
+  <rect x="30" y="50" width="740" height="50" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="50" y="72" fill="#a78bfa" font-size="12" font-weight="700">REGISTRATION</text>
+  <rect x="200" y="60" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="76" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="76" fill="#e2e8f0" font-size="12">/register</text>
+  <text x="530" y="76" fill="#94a3b8" font-size="10">Register new agent, receive token</text>
+
+  <!-- Full Sync section (highlighted) -->
+  <rect x="30" y="110" width="740" height="55" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+  <text x="50" y="132" fill="#fbbf24" font-size="12" font-weight="700">FULL SYNC</text>
+  <rect x="200" y="120" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="136" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="136" fill="#e2e8f0" font-size="12" font-weight="600">/agent/sync</text>
+  <text x="530" y="132" fill="#fbbf24" font-size="10">Everything in one request -- commands,</text>
+  <text x="530" y="148" fill="#fbbf24" font-size="10">downloads, socks, portfwd, screenshots, etc.</text>
+
+  <!-- Core section -->
+  <rect x="30" y="175" width="740" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="50" y="197" fill="#60a5fa" font-size="12" font-weight="700">CORE</text>
+  <rect x="200" y="185" width="45" height="22" rx="4" fill="#3b82f6"/>
+  <text x="222" y="201" text-anchor="middle" fill="white" font-size="10" font-weight="700">GET</text>
+  <text x="255" y="201" fill="#e2e8f0" font-size="12">/agent/checkin</text>
+  <text x="530" y="201" fill="#94a3b8" font-size="10">Heartbeat + fetch commands</text>
+
+  <rect x="200" y="215" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="231" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="231" fill="#e2e8f0" font-size="12">/agent/command/response</text>
+  <text x="530" y="231" fill="#94a3b8" font-size="10">Report command output</text>
+
+  <!-- Data Collection section -->
+  <rect x="30" y="255" width="740" height="130" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="50" y="277" fill="#34d399" font-size="12" font-weight="700">DATA COLLECTION</text>
+  <rect x="200" y="265" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="281" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="281" fill="#e2e8f0" font-size="12">/agent/download/init | chunk | cancel</text>
+
+  <rect x="200" y="295" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="311" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="311" fill="#e2e8f0" font-size="12">/agent/screenshot</text>
+  <text x="530" y="311" fill="#94a3b8" font-size="10">Submit screen capture</text>
+
+  <rect x="200" y="325" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="341" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="341" fill="#e2e8f0" font-size="12">/agent/keylog</text>
+  <text x="530" y="341" fill="#94a3b8" font-size="10">Submit keystroke data</text>
+
+  <rect x="200" y="355" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="371" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="371" fill="#e2e8f0" font-size="12">/agent/files/request</text>
+  <text x="530" y="371" fill="#94a3b8" font-size="10">Fetch BOF/PE/DLL/ELF/shellcode</text>
+
+  <!-- Agent State section -->
+  <rect x="30" y="395" width="740" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="50" y="417" fill="#fb923c" font-size="12" font-weight="700">AGENT STATE</text>
+  <rect x="200" y="405" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="421" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="421" fill="#e2e8f0" font-size="12">/agent/impersonation</text>
+  <text x="530" y="421" fill="#94a3b8" font-size="10">Report user context change</text>
+
+  <rect x="200" y="435" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="451" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="451" fill="#e2e8f0" font-size="12">/agent/sidechannel</text>
+  <text x="530" y="451" fill="#94a3b8" font-size="10">Interactive shell session data</text>
+
+  <!-- Tunneling section -->
+  <rect x="30" y="475" width="740" height="85" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="50" y="497" fill="#f87171" font-size="12" font-weight="700">TUNNELING</text>
+  <rect x="200" y="485" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="501" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="501" fill="#e2e8f0" font-size="12">/agent/socks/open | close | sync</text>
+  <text x="530" y="501" fill="#94a3b8" font-size="10">SOCKS5 proxy management</text>
+
+  <rect x="200" y="515" width="55" height="22" rx="4" fill="#22c55e"/>
+  <text x="227" y="531" text-anchor="middle" fill="white" font-size="10" font-weight="700">POST</text>
+  <text x="265" y="531" fill="#e2e8f0" font-size="12">/agent/portfwd/open | close | sync</text>
+  <text x="530" y="531" fill="#94a3b8" font-size="10">TCP port forward management</text>
+
+  <!-- Legend -->
+  <rect x="530" y="545" width="8" height="8" rx="2" fill="#f59e0b"/>
+  <text x="545" y="553" fill="#94a3b8" font-size="9">= supports all features below in a single batched request</text>
+</svg>

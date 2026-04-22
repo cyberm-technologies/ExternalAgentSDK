@@ -1,0 +1,33 @@
+{
+  "name": "@hexio/external-agent-sdk",
+  "version": "1.0.0",
+  "description": "Hexio External Agent SDK - TypeScript/JavaScript client for the Hexio C2 External Agent REST API",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc && tsc --module esnext --outDir dist --declaration false && mv dist/index.js dist/index.mjs 2>/dev/null || true",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  },
+  "license": "UNLICENSED",
+  "private": false
+}
