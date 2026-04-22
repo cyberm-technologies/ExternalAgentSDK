@@ -53,6 +53,173 @@ export interface FileRequest {
   hexlang?: string[];
 }
 
+// --- Sync batch types ---
+
+export interface SleepUpdate {
+  sleep_time: number;
+  sleep_jitter?: number;
+}
+
+export interface CommandResult {
+  command_id: number;
+  command: string;
+  response: string;
+}
+
+export interface SideChannelResponse {
+  channel_id: string;
+  data: string;
+}
+
+export interface DownloadChunkUpload {
+  download_id: string;
+  chunk_data: string;
+}
+
+export interface ScreenshotUpload {
+  filename: string;
+  data: string;
+}
+
+export interface KeylogUpload {
+  filename: string;
+  data: string;
+}
+
+export interface SocksReceive {
+  id: string;
+  data: string;
+}
+
+export interface SocksSyncRequest {
+  closes?: string[];
+  receives?: SocksReceive[];
+}
+
+export interface SocksOpenEntry {
+  id: string;
+  addr: string;
+  port: number;
+  proto: string;
+}
+
+export interface SocksSend {
+  id: string;
+  data: string;
+  size: number;
+}
+
+export interface SocksSyncResponse {
+  opens?: SocksOpenEntry[];
+  closes?: string[];
+  send?: SocksSend[];
+}
+
+export interface PortFwdOpenRequest {
+  port: number;
+  remote_host: string;
+  remote_port: number;
+}
+
+export interface PortFwdSend {
+  sockid: string;
+  data: string;
+  size: number;
+}
+
+export interface PortFwdInboundData {
+  opens?: string[];
+  sends?: PortFwdSend[];
+  closes?: string[];
+}
+
+export interface PortFwdSyncRequestEntry {
+  port: number;
+  data: PortFwdInboundData;
+}
+
+export interface PortFwdRecv {
+  sockid: string;
+  data: string;
+  size: number;
+}
+
+export interface PortFwdOutboundData {
+  recvs?: PortFwdRecv[];
+  closes?: string[];
+}
+
+export interface PortFwdSyncResponseEntry {
+  port: number;
+  data: PortFwdOutboundData;
+}
+
+export interface SyncRequest {
+  sleep?: SleepUpdate;
+  impersonation?: string;
+  commands?: CommandResult[];
+  side_channel_responses?: SideChannelResponse[];
+  download_init?: DownloadInitRequest[];
+  download_chunk?: DownloadChunkUpload[];
+  download_cancel?: string[];
+  screenshots?: ScreenshotUpload[];
+  keylog?: KeylogUpload;
+  bof_files?: string[];
+  pe_files?: string[];
+  dll_files?: string[];
+  elf_files?: string[];
+  macho_files?: string[];
+  shellcode_files?: string[];
+  hexlang?: string[];
+  /** Presence triggers open. Pass `{}`. */
+  socks_open?: Record<string, never>;
+  socks_open_port?: number;
+  /** Presence triggers close. Pass `{}`. */
+  socks_close?: Record<string, never>;
+  socks_sync?: SocksSyncRequest;
+  portfwd_open?: PortFwdOpenRequest[];
+  portfwd_close?: number[];
+  portfwd_sync?: PortFwdSyncRequestEntry[];
+}
+
+export interface DownloadChunkAck {
+  download_id: string;
+  chunk_received: boolean;
+}
+
+export interface PortFwdOpCloseResult {
+  port: number;
+  success: boolean;
+}
+
+export interface StagedFile {
+  filename: string;
+  filetype: string;
+  alias: string;
+  filedata: string;
+}
+
+export interface SyncResponse {
+  commands: Command[];
+  files?: StagedFile[];
+  download_init?: DownloadInitResponse[];
+  download_chunk?: DownloadChunkAck[];
+  bof_files?: Record<string, string>;
+  pe_files?: Record<string, string>;
+  dll_files?: Record<string, string>;
+  elf_files?: Record<string, string>;
+  macho_files?: Record<string, string>;
+  shellcode_files?: Record<string, string>;
+  hexlang?: Record<string, string>;
+  socks_open?: boolean;
+  socks_port?: number;
+  socks_close?: boolean;
+  socks_sync?: SocksSyncResponse;
+  portfwd_open?: PortFwdOpCloseResult[];
+  portfwd_close?: PortFwdOpCloseResult[];
+  portfwd_sync?: PortFwdSyncResponseEntry[];
+}
+
 export class HexioApiError extends Error {
   statusCode: number;
   constructor(statusCode: number, message: string) {
@@ -145,14 +312,8 @@ export class HexioClient {
     return this.request<CheckinResponse>("GET", "/agent/checkin");
   }
 
-  sync(sleepTime?: number, sleepJitter?: number): Promise<any> {
-    let body: any;
-    if (sleepTime !== undefined) {
-      const sleep: Record<string, number> = { sleep_time: sleepTime };
-      if (sleepJitter !== undefined) sleep.sleep_jitter = sleepJitter;
-      body = { sleep };
-    }
-    return this.request("POST", "/agent/sync", body);
+  sync(req?: SyncRequest): Promise<SyncResponse> {
+    return this.request<SyncResponse>("POST", "/agent/sync", req);
   }
 
   syncRaw(body: Record<string, any>): Promise<any> {

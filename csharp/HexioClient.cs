@@ -119,16 +119,16 @@ public sealed class HexioClient : IDisposable
     public CheckinResponse Checkin(CancellationToken ct = default)
         => Request<CheckinResponse>(HttpMethod.Get, "/agent/checkin", null, ct);
 
-    public JsonElement Sync(long? sleepTime = null, long? sleepJitter = null, CancellationToken ct = default)
+    public SyncResponse Sync(SyncRequest? req = null, CancellationToken ct = default)
     {
-        object? body = null;
-        if (sleepTime.HasValue)
-        {
-            var sleep = new Dictionary<string, long> { ["sleep_time"] = sleepTime.Value };
-            if (sleepJitter.HasValue) sleep["sleep_jitter"] = sleepJitter.Value;
-            body = new Dictionary<string, object> { ["sleep"] = sleep };
-        }
-        return RequestAsync(HttpMethod.Post, "/agent/sync", body, ct).GetAwaiter().GetResult();
+        var el = RequestAsync(HttpMethod.Post, "/agent/sync", req, ct).GetAwaiter().GetResult();
+        return el.Deserialize<SyncResponse>(JsonOpts)!;
+    }
+
+    public async Task<SyncResponse> SyncAsync(SyncRequest? req = null, CancellationToken ct = default)
+    {
+        var el = await RequestAsync(HttpMethod.Post, "/agent/sync", req, ct).ConfigureAwait(false);
+        return el.Deserialize<SyncResponse>(JsonOpts)!;
     }
 
     public JsonElement SyncRaw(object body, CancellationToken ct = default)

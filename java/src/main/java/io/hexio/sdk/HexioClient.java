@@ -3,7 +3,6 @@ package io.hexio.sdk;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 import java.net.URI;
@@ -132,15 +131,14 @@ public class HexioClient {
         return requestAs("GET", "/agent/checkin", null, CheckinResponse.class);
     }
 
-    public JsonNode sync(Long sleepTime, Long sleepJitter) {
-        ObjectNode body = null;
-        if (sleepTime != null) {
-            body = MAPPER.createObjectNode();
-            ObjectNode sleep = body.putObject("sleep");
-            sleep.put("sleep_time", sleepTime);
-            if (sleepJitter != null) sleep.put("sleep_jitter", sleepJitter);
-        }
-        return request("POST", "/agent/sync", body);
+    /**
+     * Performs a full batched POST /agent/sync. If {@code req} is null, posts no body
+     * (which the server treats as a plain checkin and only returns queued commands
+     * plus any staged files).
+     */
+    public SyncResponse sync(SyncRequest req) throws IOException {
+        JsonNode node = request("POST", "/agent/sync", req);
+        return MAPPER.convertValue(node, SyncResponse.class);
     }
 
     public JsonNode syncRaw(Object body) {

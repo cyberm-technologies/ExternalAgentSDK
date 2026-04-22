@@ -214,13 +214,27 @@ Full bidirectional sync. This is the **power endpoint** -- it supports every ope
     "socks_open": {},
     "socks_open_port": 1080,
     "socks_close": {},
-    "socks_sync": { "port": 1080, "data": "<base64>" },
+    "socks_sync": {
+        "closes": ["sockid1"],
+        "receives": [
+            { "id": "sockid1", "data": "<base64>" }
+        ]
+    },
     "portfwd_open": [
         { "port": 8080, "remote_host": "10.0.0.5", "remote_port": 3389 }
     ],
     "portfwd_close": [8080],
     "portfwd_sync": [
-        { "port": 8080, "data": "<base64>" }
+        {
+            "port": 8080,
+            "data": {
+                "opens": ["sockid1"],
+                "sends": [
+                    { "sockid": "sockid1", "data": "<base64>", "size": 1234 }
+                ],
+                "closes": ["sockid2"]
+            }
+        }
     ]
 }
 ```
@@ -243,33 +257,88 @@ Full bidirectional sync. This is the **power endpoint** -- it supports every ope
 | `macho_files` | array | Mach-O filenames to fetch |
 | `shellcode_files` | array | Shellcode filenames to fetch |
 | `hexlang` | array | HexLang profile names to fetch |
-| `socks_open` | object | Open a SOCKS5 proxy (empty `{}` is fine) |
+| `socks_open` | object | Open a SOCKS5 proxy (presence of key triggers open; empty `{}` is fine) |
 | `socks_open_port` | int64 | Optional: specific port for the SOCKS proxy |
-| `socks_close` | object | Close the SOCKS5 proxy |
-| `socks_sync` | object | SOCKS proxy data exchange |
-| `portfwd_open` | array | Open port forwards |
-| `portfwd_close` | array | Port numbers to close |
-| `portfwd_sync` | array | Port forward data exchange |
+| `socks_close` | object | Close the SOCKS5 proxy (presence of key triggers close) |
+| `socks_sync` | object | SOCKS proxy data from agent: `{ closes: [sockid], receives: [{ id, data }] }`. `data` is base64. |
+| `portfwd_open` | array | Open port forwards: `[{ port, remote_host, remote_port }]` |
+| `portfwd_close` | array | Teamserver ports to close (e.g. `[8080]`) |
+| `portfwd_sync` | array | Per-port forward data from agent: `[{ port, data: { opens: [sockid], sends: [{ sockid, data, size }], closes: [sockid] } }]`. `data` in `sends` is base64. |
 
 **Response `200` -- includes everything the agent needs:**
 
 ```json
 {
-    "commands": [ { "id": 43, "command": "ps" } ],
-    "files": [],
-    "download_init": [ { "agent_path": "/tmp/secrets.db", "download_id": "abc-123" } ],
-    "download_chunk": [ { "download_id": "abc-123", "chunk_received": true } ],
-    "bof_files": { "whoami.o": "<base64>" },
+    "commands": [
+        { "id": 43, "command": "ps" }
+    ],
+    "files": [
+        {
+            "filename": "beacon.dll",
+            "filetype": "dll",
+            "alias": "beacon",
+            "filedata": "<base64>"
+        }
+    ],
+    "download_init": [
+        { "agent_path": "/tmp/secrets.db", "download_id": "abc-123" }
+    ],
+    "download_chunk": [
+        { "download_id": "abc-123", "chunk_received": true }
+    ],
+    "bof_files":       { "whoami.o":    "<base64>" },
+    "pe_files":        { "mimikatz.exe": "<base64>" },
+    "dll_files":       { "mylib.dll":   "<base64>" },
+    "elf_files":       { "portscanner": "<base64>" },
+    "macho_files":     { "dykit":       "<base64>" },
+    "shellcode_files": { "injectme.bin":"<base64>" },
+    "hexlang":         { "socketio-masking": "<base64>" },
     "socks_open": true,
     "socks_port": 1080,
-    "socks_sync": { ... },
-    "portfwd_open": [ { "port": 8080, "success": true } ],
+    "socks_close": true,
+    "socks_sync": {
+        "opens": [
+            { "id": "sockid1", "addr": "1.2.3.4", "port": 80, "proto": "tcp" }
+        ],
+        "closes": ["sockid2"],
+        "send": [
+            { "id": "sockid1", "data": "<base64>", "size": 1234 }
+        ]
+    },
+    "portfwd_open":  [ { "port": 8080, "success": true } ],
     "portfwd_close": [ { "port": 8080, "success": true } ],
-    "portfwd_sync": [ { "port": 8080, "data": "<base64>" } ]
+    "portfwd_sync": [
+        {
+            "port": 8080,
+            "data": {
+                "recvs": [
+                    { "sockid": "sockid1", "data": "<base64>", "size": 1234 }
+                ],
+                "closes": ["sockid2"]
+            }
+        }
+    ]
 }
 ```
 
 Only fields relevant to your request are included in the response.
+
+**Response field reference:**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `commands` | array | Queued commands: `[{ id, command }]`. Always present (possibly empty). |
+| `files` | array | Staged file uploads for the agent: `[{ filename, filetype, alias, filedata }]`. Omitted if none staged. `filedata` is base64. |
+| `download_init` | array | Acknowledgement of `download_init` requests: `[{ agent_path, download_id }]`. |
+| `download_chunk` | array | Acknowledgement of chunk uploads: `[{ download_id, chunk_received }]`. |
+| `bof_files` / `pe_files` / `dll_files` / `elf_files` / `macho_files` / `shellcode_files` / `hexlang` | object | Map of requested filename to base64 bytes. Filenames that couldn't be resolved are omitted. |
+| `socks_open` | bool | Whether the SOCKS proxy was opened this sync. |
+| `socks_port` | int64 | Teamserver port that was bound (only when `socks_open` is `true`). |
+| `socks_close` | bool | Whether the SOCKS proxy was closed this sync. |
+| `socks_sync` | object | SOCKS data for the agent: `{ opens: [{ id, addr, port, proto }], closes: [sockid], send: [{ id, data, size }] }`. `data` is base64. Note: the field is `send` (singular). |
+| `portfwd_open` | array | Per-port open result: `[{ port, success }]`. |
+| `portfwd_close` | array | Per-port close result: `[{ port, success }]`. |
+| `portfwd_sync` | array | Per-port forward data for the agent: `[{ port, data: { recvs: [{ sockid, data, size }], closes: [sockid] } }]`. `data` inside `recvs` is base64. |
 
 ---
 
