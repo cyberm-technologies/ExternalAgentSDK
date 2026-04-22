@@ -5,7 +5,7 @@ A zero-dependency Go client for the Hexio External Agent REST API.
 ## Installation
 
 ```bash
-go get github.com/hexio/external-agent-sdk-go
+go get github.com/cyberm-technologies/ExternalAgentSDK/go
 ```
 
 Or copy `hexio_sdk.go` into your project directly.
@@ -19,7 +19,7 @@ import (
     "fmt"
     "time"
 
-    hexio "github.com/hexio/external-agent-sdk-go"
+    hexio "github.com/cyberm-technologies/ExternalAgentSDK/go"
 )
 
 func main() {
