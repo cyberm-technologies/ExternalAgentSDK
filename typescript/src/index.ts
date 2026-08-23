@@ -62,7 +62,6 @@ export interface SleepUpdate {
 
 export interface CommandResult {
   command_id: number;
-  command: string;
   response: string;
 }
 
@@ -322,10 +321,9 @@ export class HexioClient {
 
   // --- Command Response ---
 
-  commandResponse(commandId: number, command: string, response: string): Promise<any> {
+  commandResponse(commandId: number, response: string): Promise<any> {
     return this.request("POST", "/agent/command/response", {
       command_id: commandId,
-      command,
       response,
     });
   }

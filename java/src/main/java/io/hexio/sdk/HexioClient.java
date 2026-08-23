@@ -33,7 +33,7 @@ import java.util.Map;
  * while (true) {
  *     CheckinResponse checkin = client.checkin();
  *     for (Command cmd : checkin.commands) {
- *         client.commandResponse(cmd.id, cmd.command, "result");
+ *         client.commandResponse(cmd.id, "result");
  *     }
  *     Thread.sleep(5000);
  * }
@@ -147,10 +147,9 @@ public class HexioClient {
 
     // --- Command Response ---
 
-    public JsonNode commandResponse(long commandId, String command, String response) {
+    public JsonNode commandResponse(long commandId, String response) {
         Map<String, Object> body = new HashMap<>();
         body.put("command_id", commandId);
-        body.put("command", command);
         body.put("response", response);
         return request("POST", "/agent/command/response", body);
     }

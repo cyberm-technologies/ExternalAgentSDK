@@ -14,7 +14,6 @@ public class SleepUpdate
 public class CommandResult
 {
     [JsonPropertyName("command_id")] public long CommandId { get; set; }
-    [JsonPropertyName("command")] public string Command { get; set; } = "";
     [JsonPropertyName("response")] public string Response { get; set; } = "";
 }
 

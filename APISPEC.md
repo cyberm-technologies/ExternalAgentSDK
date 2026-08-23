@@ -168,7 +168,6 @@ Full bidirectional sync. This is the **power endpoint** -- it supports every ope
     "commands": [
         {
             "command_id": 42,
-            "command": "whoami",
             "response": "nt authority\\system"
         }
     ],
@@ -243,7 +242,7 @@ Full bidirectional sync. This is the **power endpoint** -- it supports every ope
 |-------|------|-------------|
 | `sleep` | object | Update beacon interval (`sleep_time`) and jitter (`sleep_jitter`) |
 | `impersonation` | string | Report user context change; empty string clears it |
-| `commands` | array | Command execution results (`command_id`, `command`, `response`) |
+| `commands` | array | Command execution results (`command_id`, `response`) |
 | `side_channel_responses` | array | Side channel output (`channel_id`, `data`) |
 | `download_init` | array | Start file downloads (same fields as `/agent/download/init`) |
 | `download_chunk` | array | File chunks (`download_id`, `chunk_data` as base64) |
@@ -351,7 +350,6 @@ Report the result of a command execution.
 ```json
 {
     "command_id": 42,
-    "command": "whoami",
     "response": "nt authority\\system"
 }
 ```
@@ -359,7 +357,6 @@ Report the result of a command execution.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `command_id` | int64 | yes | The `id` from the command received via checkin |
-| `command` | string | yes | The command string that was executed |
 | `response` | string | yes | Full command output |
 
 **Response `200`:** `{ "status": "ok" }`

@@ -22,7 +22,7 @@ Usage:
         checkin = client.checkin()
         for cmd in checkin["commands"]:
             output = execute_locally(cmd["command"])
-            client.command_response(cmd["id"], cmd["command"], output)
+            client.command_response(cmd["id"], output)
         time.sleep(5)
 """
 
@@ -76,13 +76,11 @@ class SleepUpdate:
 @dataclass
 class CommandResult:
     command_id: int
-    command: str
     response: str
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "command_id": self.command_id,
-            "command": self.command,
             "response": self.response,
         }
 
@@ -615,10 +613,9 @@ class HexioClient:
 
     # --- Command Response ---
 
-    def command_response(self, command_id: int, command: str, response: str) -> dict:
+    def command_response(self, command_id: int, response: str) -> dict:
         return self._request("POST", "/agent/command/response", {
             "command_id": command_id,
-            "command": command,
             "response": response,
         })
 

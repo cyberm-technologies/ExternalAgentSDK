@@ -190,7 +190,6 @@ struct SleepUpdate {
 
 struct CommandResult {
     int64_t command_id = 0;
-    std::string command;
     std::string response;
 };
 
@@ -303,7 +302,7 @@ public:
     CheckinResponse checkinAgent();
     CheckinResponse sync(int64_t sleepTime = -1, int64_t sleepJitter = -1);
     SyncResponse sync(const SyncRequest& req);
-    void commandResponse(int64_t commandId, const std::string& command, const std::string& response);
+    void commandResponse(int64_t commandId, const std::string& response);
     DownloadInitResponse downloadInit(const std::string& fileName, const std::string& agentPath, int fileSize, int chunkSize, int totalChunks);
     std::string downloadChunk(const std::string& downloadId, const std::string& chunkDataB64);
     void downloadCancel(const std::string& downloadId);
@@ -651,10 +650,9 @@ CheckinResponse HexioClient::sync(int64_t sleepTime, int64_t sleepJitter) {
     return cr;
 }
 
-void HexioClient::commandResponse(int64_t commandId, const std::string& command, const std::string& response) {
+void HexioClient::commandResponse(int64_t commandId, const std::string& response) {
     auto body = json::Object()
         .add("command_id", commandId)
-        .add("command", command)
         .add("response", response)
         .build();
     request("POST", "/agent/command/response", body);

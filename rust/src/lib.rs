@@ -21,7 +21,7 @@
 //!     let checkin = client.checkin().unwrap();
 //!     for cmd in checkin.commands {
 //!         let output = format!("ran {}", cmd.command);
-//!         client.command_response(cmd.id, &cmd.command, &output).unwrap();
+//!         client.command_response(cmd.id, &output).unwrap();
 //!     }
 //!     std::thread::sleep(std::time::Duration::from_secs(5));
 //! }
@@ -143,10 +143,9 @@ impl HexioClient {
         self.request("POST", "/agent/sync", Some(body))
     }
 
-    pub fn command_response(&self, command_id: i64, command: &str, response: &str) -> Result<Value> {
+    pub fn command_response(&self, command_id: i64, response: &str) -> Result<Value> {
         let body = json!({
             "command_id": command_id,
-            "command": command,
             "response": response,
         });
         self.request("POST", "/agent/command/response", Some(&body))
@@ -337,7 +336,6 @@ pub struct SleepUpdate {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CommandResult {
     pub command_id: i64,
-    pub command: String,
     pub response: String,
 }
 

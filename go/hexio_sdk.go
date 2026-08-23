@@ -19,7 +19,7 @@
 //	    checkin, _ := client.Checkin()
 //	    for _, cmd := range checkin.Commands {
 //	        output := executeLocally(cmd.Command)
-//	        client.CommandResponse(cmd.Id, cmd.Command, output)
+//	        client.CommandResponse(cmd.Id, output)
 //	    }
 //	    time.Sleep(5 * time.Second)
 //	}
@@ -166,7 +166,6 @@ type SleepUpdate struct {
 
 type CommandResult struct {
 	CommandId int64  `json:"command_id"`
-	Command   string `json:"command"`
 	Response  string `json:"response"`
 }
 
@@ -378,10 +377,9 @@ func (c *Client) Sync(req *SyncRequest) (*SyncResponse, error) {
 	return &resp, nil
 }
 
-func (c *Client) CommandResponse(commandId int64, command string, response string) error {
+func (c *Client) CommandResponse(commandId int64, response string) error {
 	_, err := c.do("POST", "/agent/command/response", map[string]any{
 		"command_id": commandId,
-		"command":    command,
 		"response":   response,
 	})
 	return err

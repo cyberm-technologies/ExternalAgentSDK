@@ -136,11 +136,10 @@ public sealed class HexioClient : IDisposable
 
     // --- Command Response ---
 
-    public JsonElement CommandResponse(long commandId, string command, string response, CancellationToken ct = default)
+    public JsonElement CommandResponse(long commandId, string response, CancellationToken ct = default)
         => RequestAsync(HttpMethod.Post, "/agent/command/response", new
         {
             command_id = commandId,
-            command,
             response,
         }, ct).GetAwaiter().GetResult();
 

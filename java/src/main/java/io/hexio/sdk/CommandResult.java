@@ -8,7 +8,5 @@ public class CommandResult {
     @JsonProperty("command_id")
     public Long commandId;
 
-    public String command;
-
     public String response;
 }
